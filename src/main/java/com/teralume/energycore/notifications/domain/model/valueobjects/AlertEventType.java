@@ -1,0 +1,22 @@
+package com.teralume.energycore.notifications.domain.model.valueobjects;
+
+public enum AlertEventType {
+    MANUAL,
+    CONSUMPTION_REVIEW,
+    DEVICE_STATUS,
+    GROUP_STATUS,
+    ROOM_ACTIVITY,
+    WORKPLACE_ACTIVITY,
+    ROUTINE_UPCOMING,
+    ROUTINE_EXECUTED,
+    ROUTINE_FAILED,
+    ROUTINE_DISABLED,
+    GOAL_PROGRESS,
+    GOAL_DEADLINE,
+    GOAL_EXCEEDED,
+    GOAL_COMPLETED,
+    REPORT_SUMMARY,
+    RULE_EVALUATION,
+    SYSTEM_STATUS,
+    MODE_ACTIVITY
+}
