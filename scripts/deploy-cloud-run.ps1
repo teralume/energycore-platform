@@ -1,10 +1,12 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$AllowBillingLink
+)
 
 $ErrorActionPreference = 'Continue'
 
-$projectId = 'university-energycore'
-$projectDisplayName = 'University - EnergyCore'
+$projectId = 'university-energycorp'
+$projectDisplayName = 'University - EnergyCorp'
 $folderId = '1062944442437'
 $billingAccountId = '01705E-BF0C87-98822A'
 $region = 'us-east1'
@@ -16,8 +18,8 @@ $databaseSecretName = 'energycore-database-password'
 $jwtSecretName = 'energycore-jwt-secret'
 $localImage = 'energycore-platform:cloud-run-local'
 $remoteImage = "$region-docker.pkg.dev/$projectId/$repository/energycore-platform:cloud-run"
-$frontendOrigin = 'https://university-energycore.web.app'
-$firebaseAppOrigin = 'https://university-energycore.firebaseapp.com'
+$frontendOrigin = 'https://university-energycorp.web.app'
+$firebaseAppOrigin = 'https://university-energycorp.firebaseapp.com'
 $backendRoot = Split-Path -Parent $PSScriptRoot
 
 function Assert-NativeCommand {
@@ -250,11 +252,28 @@ try {
 
     Write-Host 'Permisos mínimos de despliegue aplicados.'
 
-    gcloud billing projects link $projectId `
-        --billing-account=$billingAccountId `
-        --quiet | Out-Null
+    $billingEnabled = (
+        gcloud billing projects describe $projectId `
+            --format='value(billingEnabled)' 2>$null
+    ).Trim()
 
-    Assert-NativeCommand 'No se pudo vincular la cuenta de facturación.'
+    if ($billingEnabled -ne 'True') {
+        if (-not $AllowBillingLink) {
+            throw (
+                "El proyecto no tiene facturación habilitada. " +
+                "Por seguridad y control de gasto, el script no la vincula sin -AllowBillingLink."
+            )
+        }
+
+        gcloud billing projects link $projectId `
+            --billing-account=$billingAccountId `
+            --quiet | Out-Null
+
+        Assert-NativeCommand 'No se pudo vincular la cuenta de facturación.'
+    }
+    else {
+        Write-Host 'La facturación ya estaba habilitada; no se modificó.'
+    }
 
     gcloud services enable `
         run.googleapis.com `

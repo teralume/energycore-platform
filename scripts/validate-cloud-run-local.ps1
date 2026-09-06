@@ -12,7 +12,7 @@ $network = 'energycore-cloudrun-test'
 $dbName = 'energycore'
 $dbUser = 'energycore'
 $testEmail = 'portfolio.test@energycore.dev'
-$frontendOrigin = 'https://university-energycore.web.app'
+$frontendOrigin = 'https://university-energycorp.web.app'
 
 function New-RandomBase64 {
     param([Parameter(Mandatory)][int]$Length)
