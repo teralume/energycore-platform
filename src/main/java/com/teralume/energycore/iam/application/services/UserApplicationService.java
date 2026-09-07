@@ -49,7 +49,7 @@ public class UserApplicationService implements UserCommandService, UserQueryServ
     @Override
     @Transactional
     public UserUiPreference getUiPreference(Long userId) {
-        findUser(userId);
+        lockUserForPreferenceUpdate(userId);
         return userUiPreferenceRepository.findByUserId(userId)
                 .orElseGet(() -> userUiPreferenceRepository.save(new UserUiPreference(userId)));
     }
@@ -84,7 +84,7 @@ public class UserApplicationService implements UserCommandService, UserQueryServ
     @Override
     @Transactional
     public UserUiPreference updateUiPreference(Long userId, UpdateUiPreferenceCommand command) {
-        findUser(userId);
+        lockUserForPreferenceUpdate(userId);
         UserUiPreference preference = userUiPreferenceRepository.findByUserId(userId)
                 .orElseGet(() -> new UserUiPreference(userId));
         preference.update(command.language(), command.theme());
@@ -101,6 +101,13 @@ public class UserApplicationService implements UserCommandService, UserQueryServ
 
     private User findUser(Long userId) {
         return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+    }
+
+    private void lockUserForPreferenceUpdate(Long userId) {
+        // Lock the parent: the preference row does not exist on first access.
+        // Both GET initialization and PUT must share this transaction-scoped lock.
+        userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."));
     }
 }

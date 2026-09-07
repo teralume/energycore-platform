@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -281,11 +282,7 @@ public class EnergyMonitoringApplicationService {
             List<EnergyReading> readings,
             Device device
     ) {
-        BigDecimal watts = readings.stream()
-                .map(EnergyReading::getWatts)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal watts = currentPower(device).setScale(2, RoundingMode.HALF_UP);
         BigDecimal kilowattHours = readings.stream()
                 .map(this::safeKilowattHours)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -323,36 +320,46 @@ public class EnergyMonitoringApplicationService {
                 .collect(Collectors.toMap(Device::getId, Function.identity()));
         Map<String, Long> activeCountByRoom = activeDevices.stream()
                 .collect(Collectors.groupingBy(this::resolveRoom, Collectors.counting()));
+        Map<String, BigDecimal> currentPowerByRoom = activeDevices.stream()
+                .collect(Collectors.groupingBy(this::resolveRoom,
+                        Collectors.reducing(BigDecimal.ZERO, this::currentPower, BigDecimal::add)));
+        Map<String, List<EnergyReading>> readingsByRoom = readings.stream()
+                .collect(Collectors.groupingBy(reading -> resolveRoom(deviceById.get(reading.getDeviceId()))));
 
-        return readings.stream()
-                .collect(Collectors.groupingBy(reading -> resolveRoom(deviceById.get(reading.getDeviceId()))))
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    BigDecimal watts = entry.getValue().stream()
-                            .map(EnergyReading::getWatts)
-                            .filter(Objects::nonNull)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+        // Power is an instantaneous estimate, unlike cumulative energy and cost.
+        // Include active rooms even when their first sampling interval is not due yet.
+        return Stream.concat(readingsByRoom.keySet().stream(), currentPowerByRoom.keySet().stream())
+                .distinct()
+                .map(room -> {
+                    List<EnergyReading> roomReadings = readingsByRoom.getOrDefault(room, List.of());
+                    BigDecimal watts = currentPowerByRoom.getOrDefault(room, BigDecimal.ZERO)
                             .setScale(2, RoundingMode.HALF_UP);
-                    BigDecimal kilowattHours = entry.getValue().stream()
+                    BigDecimal kilowattHours = roomReadings.stream()
                             .map(this::safeKilowattHours)
                             .reduce(BigDecimal.ZERO, BigDecimal::add)
                             .setScale(6, RoundingMode.HALF_UP);
-                    BigDecimal estimatedCost = entry.getValue().stream()
+                    BigDecimal estimatedCost = roomReadings.stream()
                             .map(this::safeEstimatedCost)
                             .reduce(BigDecimal.ZERO, BigDecimal::add)
                             .setScale(2, RoundingMode.HALF_UP);
 
                     return new EnergyDashboardSummaryResource.RoomConsumption(
-                            entry.getKey(),
+                            room,
                             watts,
                             kilowattHours,
                             estimatedCost,
-                            activeCountByRoom.getOrDefault(entry.getKey(), 0L).intValue()
+                            activeCountByRoom.getOrDefault(room, 0L).intValue()
                     );
                 })
-                .sorted(Comparator.comparing(EnergyDashboardSummaryResource.RoomConsumption::estimatedCost).reversed())
+                .sorted(Comparator.comparing(EnergyDashboardSummaryResource.RoomConsumption::estimatedCost).reversed()
+                        .thenComparing(EnergyDashboardSummaryResource.RoomConsumption::room))
                 .toList();
+    }
+
+    private BigDecimal currentPower(Device device) {
+        return device != null && device.getStatus() == DeviceStatus.ON && device.getPowerWatts() != null
+                ? device.getPowerWatts()
+                : BigDecimal.ZERO;
     }
 
     private List<EnergyDashboardSummaryResource.ActiveDevice> buildActiveDeviceDetails(List<Device> activeDevices) {
