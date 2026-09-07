@@ -14,5 +14,8 @@ public interface UserRepository {
 
     Optional<User> findById(Long id);
 
+    /** Serializes changes to user-owned singleton records within a transaction. */
+    Optional<User> findByIdForUpdate(Long id);
+
     User save(User user);
 }

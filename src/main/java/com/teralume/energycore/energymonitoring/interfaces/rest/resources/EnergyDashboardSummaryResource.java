@@ -38,6 +38,7 @@ public record EnergyDashboardSummaryResource(
     ) {
     }
 
+    /** watts is current configured power while ON; energy and cost accumulate today's readings. */
     public record DeviceConsumption(
             Long deviceId,
             String name,
@@ -51,6 +52,7 @@ public record EnergyDashboardSummaryResource(
     ) {
     }
 
+    /** watts sums current configured power of ON devices, never samples across time. */
     public record RoomConsumption(
             String room,
             BigDecimal watts,
