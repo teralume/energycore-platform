@@ -1,0 +1,65 @@
+name: Platform CI and delivery
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - run: chmod +x mvnw
+      - name: Unit, integration, and BDD acceptance tests
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Build container contract
+        run: docker build --tag energycore-platform:${{ github.sha }} .
+      - name: Publish tested backend package and reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: energycore-platform-${{ github.sha }}
+          path: |
+            target/*.jar
+            target/surefire-reports
+          if-no-files-found: error
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.GCP_DEPLOY_ENABLED == 'true'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: university-energycorp
+          region: us-east1
+          service: energycore-platform
+          source: .
+          flags: >-
+            --min-instances=0
+            --max-instances=1
+            --memory=512Mi
+            --cpu=1
+      - name: Verify deployed health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --retry 10 --retry-delay 3 "${{ steps.deploy.outputs.url }}/actuator/health"
