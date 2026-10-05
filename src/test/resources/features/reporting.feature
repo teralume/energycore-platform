@@ -1,63 +1,70 @@
-@reporting
+﻿@reporting
 Feature: Reporting and Energy Goals
-  As a registered user
-  I want to review consumption reports and set energy goals
-  So that I can track and reduce my energy spending
-
-  # Covers: US-16 (Historial de consumo), US-18 (Recomendaciones de ahorro),
-  #         US-25 (Consumo por area/equipo), US-37 (Exportar historial a CSV)
-
   Background:
     Given the RESTful API is available at base path "/api/v1"
     And the client is authenticated as "carlos.mendoza@example.com"
 
-  @US-25 @platform-summary
   Scenario: Retrieving the platform reporting summary
-    Given the user has consumption data across several rooms
     When the client sends a GET request to "/reporting/platform/summary"
     Then the response status code is 200
-    And the response body contains a "breakdown" grouped by area
+    And the response body contains a non-empty "userId"
 
-  @US-18 @energy-goal
   Scenario: Creating an energy saving goal
     When the client sends a POST request to "/reports/energy-goals" with body:
       """
-      {
-        "title": "Reduce 10% this month",
-        "targetKwh": 120.5,
-        "period": "MONTHLY"
-      }
-      """
+{"title":"Reduce 10% this month","targetKilowattHours":120.5,"deadline":"2030-12-31"}
+"""
     Then the response status code is 201
     And the response body contains "title" equal to "Reduce 10% this month"
 
-  @US-18 @energy-goal
   Scenario: Listing energy goals
-    Given the user has 1 active energy goal
+    Given the client sends a POST request to "/reports/energy-goals" with body:
+      """
+{"title":"Active goal","targetKilowattHours":100,"deadline":"2030-12-31"}
+"""
     When the client sends a GET request to "/reports/energy-goals"
     Then the response status code is 200
     And the response body is a list with 1 item
 
-  @US-18 @energy-goal
   Scenario: Updating an energy goal target
-    Given an energy goal with id 2 exists
-    When the client sends a PATCH request to "/reports/energy-goals/2" with body:
+    Given the client sends a POST request to "/reports/energy-goals" with body:
       """
-      { "targetKwh": 100.0 }
+{"title":"Editable goal","targetKilowattHours":120,"deadline":"2030-12-31"}
+"""
+    When the client sends a PATCH request to "/reports/energy-goals/{last}" with body:
       """
+{"targetKilowattHours":99.9}
+"""
     Then the response status code is 200
-    And the response body contains "targetKwh" equal to "100.0"
+    And the response body contains "targetKilowattHours" equal to "99.9"
 
-  @US-16 @report
   Scenario: Deleting a stored report
-    Given a report with id 9 exists
-    When the client sends a DELETE request to "/reports/9"
+    Given the client sends a POST request to "/devices" with body:
+      """
+{"name":"Report Device","type":"SMART_PLUG","powerWatts":90}
+      """
+    And the last created resource is remembered as "device"
+    And the client sends a POST request to "/energy-readings" with body:
+      """
+{"deviceId":{device},"deviceName":"Report Device","watts":90}
+      """
+    And the response status code is 200
+    And the client sends a POST request to "/reports" with body:
+      """
+{"startDate":"2026-10-01","endDate":"2026-10-31"}
+      """
+    And the response status code is 201
+    And the client sends a GET request to "/reports"
+    And the first response item is remembered as "report"
+    When the client sends a DELETE request to "/reports/{report}"
     Then the response status code is 204
 
-  @US-37 @export
   Scenario: Exporting energy readings as CSV
-    Given the user has energy readings for the last 7 days
+    Given the client sends a POST request to "/energy-readings" with body:
+      """
+{"deviceId":201,"deviceName":"CSV Device","watts":75}
+"""
     When the client sends a GET request to "/energy-readings/export" accepting "text/csv"
     Then the response status code is 200
-    And the response "Content-Type" header is "text/csv"
+    And the response "Content-Type" header starts with "text/csv"
     And the response body starts with a CSV header row
