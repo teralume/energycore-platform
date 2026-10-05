@@ -36,6 +36,7 @@ import com.teralume.energycore.iam.domain.model.AccessPermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -56,6 +57,7 @@ public class DeviceControlController {
     }
 
     @PostMapping("/devices")
+    @ResponseStatus(HttpStatus.CREATED)
     public DeviceResource createDevice(@Valid @RequestBody CreateDeviceResource request) {
         var command = CreateDeviceCommandFromResourceAssembler.toCommandFromResource(request, requireDeviceManagement());
         var device = commandService.handle(command);
@@ -92,6 +94,7 @@ public class DeviceControlController {
     }
 
     @DeleteMapping("/devices/{deviceId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDevice(
             @PathVariable Long deviceId
     ) {
@@ -106,6 +109,7 @@ public class DeviceControlController {
     }
 
     @PostMapping("/routines")
+    @ResponseStatus(HttpStatus.CREATED)
     public RoutineResource createRoutine(
             @Valid @RequestBody CreateRoutineResource request
     ) {
@@ -147,6 +151,7 @@ public class DeviceControlController {
     }
 
     @PostMapping("/device-groups")
+    @ResponseStatus(HttpStatus.CREATED)
     public DeviceGroupResource createDeviceGroup(
             @Valid @RequestBody CreateDeviceGroupResource request
     ) {
@@ -196,6 +201,7 @@ public class DeviceControlController {
     }
 
     @PostMapping("/operation-modes")
+    @ResponseStatus(HttpStatus.CREATED)
     public OperationModeResource createOperationMode(@Valid @RequestBody CreateOperationModeResource request) {
         var command = CreateOperationModeCommandFromResourceAssembler.toCommandFromResource(request, requireRoutineManagement());
         var mode = commandService.handle(command);

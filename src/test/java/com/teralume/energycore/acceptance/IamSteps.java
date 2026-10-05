@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * live in {@link CommonHttpSteps}.
  */
 public class IamSteps {
+
+    private static final AtomicInteger SCENARIO_SEQUENCE = new AtomicInteger();
 
     @Autowired
     private TestContext ctx;
@@ -61,11 +64,19 @@ public class IamSteps {
 
     @Given("the client is authenticated as {string}")
     public void theClientIsAuthenticatedAs(String email) throws Exception {
+        if (!ctx.iamScenario && "carlos.mendoza@example.com".equals(email)) {
+            email = "carlos.mendoza+acceptance-%d@example.com".formatted(SCENARIO_SEQUENCE.incrementAndGet());
+        }
         anAccountExists(email, "Secur3Pass");
         ctx.lastAuthEmail = email;
         HttpResponse<String> response = postJson("/api/v1/auth/sign-in",
                 "{\"email\":\"%s\",\"password\":\"Secur3Pass\"}".formatted(email));
-        ctx.jwtToken = mapper.readTree(response.body()).get("token").asText();
+        var token = mapper.readTree(response.body()).get("token");
+        assertThat(response.statusCode())
+                .as("sign-in response: %s", response.body())
+                .isEqualTo(200);
+        assertThat(token).as("authentication token in response: %s", response.body()).isNotNull();
+        ctx.jwtToken = token.asText();
     }
 
     @Then("a subsequent sign in with the same credentials returns status code {int}")

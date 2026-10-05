@@ -13,11 +13,15 @@ import com.teralume.energycore.energymonitoring.interfaces.rest.resources.Update
 import com.teralume.energycore.energymonitoring.interfaces.rest.resources.EnergySamplingSettingsResource;
 import com.teralume.energycore.energymonitoring.interfaces.rest.transform.CreateEnergyReadingCommandFromResourceAssembler;
 import com.teralume.energycore.energymonitoring.interfaces.rest.transform.EnergyReadingResourceFromEntityAssembler;
+import com.teralume.energycore.energymonitoring.infrastructure.export.EnergyReadingsCsvExporter;
 import com.teralume.energycore.iam.application.security.AccessAuthorizationService;
 import com.teralume.energycore.iam.domain.model.AccessPermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,6 +36,7 @@ public class EnergyMonitoringController {
     private final EnergyMonitoringCommandService commandService;
     private final EnergyMonitoringQueryService queryService;
     private final AccessAuthorizationService accessAuthorizationService;
+    private final EnergyReadingsCsvExporter csvExporter;
 
     @GetMapping
     public List<EnergyReadingResource> getReadings(
@@ -57,6 +62,16 @@ public class EnergyMonitoringController {
     @GetMapping("/dashboard-summary")
     public EnergyDashboardSummaryResource getDashboardSummary() {
         return queryService.handle(new GetEnergyDashboardSummaryQuery(requireEnergyAccess()));
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv")
+    public ResponseEntity<byte[]> exportReadings() {
+        Long userId = requireEnergyAccess();
+        var readings = queryService.handle(new GetEnergyReadingsByUserQuery(userId, null, null));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=energy-readings.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csvExporter.export(readings));
     }
 
     @GetMapping("/sampling-settings")

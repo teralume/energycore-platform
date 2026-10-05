@@ -11,6 +11,7 @@ import com.teralume.energycore.iam.domain.model.AccessPermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -31,6 +32,7 @@ public class ServiceManagementController {
     }
 
     @PostMapping("/support-tickets")
+    @ResponseStatus(HttpStatus.CREATED)
     public SupportTicketResource createSupportTicket(@Valid @RequestBody CreateSupportTicketResource request) {
         var command = CreateSupportTicketCommandFromResourceAssembler.toCommandFromResource(request, requireSupportManagement());
         var ticket = commandService.createSupportTicket(command);
@@ -57,6 +59,7 @@ public class ServiceManagementController {
     }
 
     @PostMapping("/maintenance-tickets")
+    @ResponseStatus(HttpStatus.CREATED)
     public MaintenanceTicketResource createMaintenanceTicket(@Valid @RequestBody CreateMaintenanceTicketResource request) {
         var command = CreateMaintenanceTicketCommandFromResourceAssembler.toCommandFromResource(request, requireSupportManagement());
         var ticket = commandService.createMaintenanceTicket(command);

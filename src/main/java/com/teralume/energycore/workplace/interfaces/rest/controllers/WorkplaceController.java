@@ -14,6 +14,7 @@ import com.teralume.energycore.iam.domain.model.AccessPermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -35,6 +36,7 @@ public class WorkplaceController {
     }
 
     @PostMapping("/locations")
+    @ResponseStatus(HttpStatus.CREATED)
     public LocationResource createLocation(@Valid @RequestBody CreateLocationResource request) {
         return LocationResourceFromEntityAssembler.toResourceFromEntity(
                 commandService.createLocation(CreateLocationCommandFromResourceAssembler.toCommandFromResource(request, requireSpaceManagement()))
@@ -57,6 +59,7 @@ public class WorkplaceController {
     }
 
     @PostMapping("/rooms")
+    @ResponseStatus(HttpStatus.CREATED)
     public RoomResource createRoom(@Valid @RequestBody CreateRoomResource request) {
         return RoomResourceFromEntityAssembler.toResourceFromEntity(
                 commandService.createRoom(requireSpaceManagement(), CreateRoomCommandFromResourceAssembler.toCommandFromResource(request))
@@ -82,6 +85,7 @@ public class WorkplaceController {
     }
 
     @PostMapping("/device-assignments")
+    @ResponseStatus(HttpStatus.CREATED)
     public DeviceAssignmentResource assignDevice(@Valid @RequestBody AssignDeviceResource request) {
         return DeviceAssignmentResourceFromEntityAssembler.toResourceFromEntity(
                 commandService.assignDevice(requireSpaceManagement(), AssignDeviceCommandFromResourceAssembler.toCommandFromResource(request))
@@ -99,6 +103,7 @@ public class WorkplaceController {
     }
 
     @DeleteMapping("/locations/{locationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteLocation(@PathVariable Long locationId) {
         commandService.deleteLocation(requireSpaceManagement(), locationId);
     }

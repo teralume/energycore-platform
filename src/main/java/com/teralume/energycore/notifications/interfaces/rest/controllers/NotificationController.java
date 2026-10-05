@@ -19,6 +19,7 @@ import com.teralume.energycore.iam.domain.model.AccessPermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -39,6 +40,7 @@ public class NotificationController {
     }
 
     @PostMapping("/alerts")
+    @ResponseStatus(HttpStatus.CREATED)
     public AlertResource createAlert(@Valid @RequestBody CreateAlertResource request) {
         var command = CreateAlertCommandFromResourceAssembler.toCommandFromResource(request, requireAlertManagement());
         var alert = commandService.handle(command);
@@ -79,6 +81,7 @@ public class NotificationController {
     }
 
     @PostMapping("/alerts/rules")
+    @ResponseStatus(HttpStatus.CREATED)
     public AlertRuleResource createRule(@Valid @RequestBody CreateAlertRuleResource request) {
         var command = CreateAlertRuleCommandFromResourceAssembler.toCommandFromResource(request, requireAlertManagement());
         var rule = commandService.handle(command);

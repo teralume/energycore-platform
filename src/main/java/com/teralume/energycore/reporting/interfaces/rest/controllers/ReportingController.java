@@ -17,6 +17,7 @@ import com.teralume.energycore.iam.domain.model.AccessPermission;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -46,6 +47,7 @@ public class ReportingController {
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ConsumptionReportResource createReport(
             @Valid @RequestBody CreateConsumptionReportResource request
     ) {
@@ -55,6 +57,7 @@ public class ReportingController {
     }
 
     @DeleteMapping("/{reportId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteReport(@PathVariable Long reportId) {
         commandService.deleteReport(requireReportAccess(), reportId);
     }
@@ -68,6 +71,7 @@ public class ReportingController {
     }
 
     @PostMapping("/energy-goals")
+    @ResponseStatus(HttpStatus.CREATED)
     public EnergyGoalResource createGoal(@Valid @RequestBody CreateEnergyGoalResource request) {
         return EnergyGoalResourceFromEntityAssembler.toResourceFromEntity(
                 commandService.handle(CreateEnergyGoalCommandFromResourceAssembler.toCommandFromResource(request, requireReportAccess()))
